@@ -164,3 +164,8 @@ func (c *Client) StreamingList(ctx context.Context, id ID) (chan Event, error) {
 
 	return c.streaming(ctx, "list", params)
 }
+
+// Streamingdirect return channel to read direct messages and notifications.
+func (c *Client) StreamingDirect(ctx context.Context) (chan Event, error) {
+	return c.streaming(ctx, "direct", nil)
+}
