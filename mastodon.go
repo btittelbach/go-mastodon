@@ -35,6 +35,52 @@ type Client struct {
 	UserAgent string
 }
 
+func doAPIMultiPartPost(u *url.URL, params map[string]interface{}) (req *http.Request, content_type string, err error) {
+	method := http.MethodPost
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	for key, valueif := range params {
+		switch value := valueif.(type) {
+		case *os.File:
+			var part io.Writer
+			part, err = mw.CreateFormFile(key, value.Name())
+			if err != nil {
+				return
+			}
+			_, err = io.Copy(part, value)
+			if err != nil {
+				return
+			}
+
+		case io.Reader:
+			var part io.Writer
+			part, err = mw.CreateFormFile(key, "upload")
+			if err != nil {
+				return
+			}
+			_, err = io.Copy(part, value)
+			if err != nil {
+				return
+			}
+		case string:
+			err = mw.WriteField(key, value)
+		default:
+			err = errors.New("doAPIMultiPartPost encountered invalid type in argument params")
+			return
+		}
+	}
+	if err = mw.Close(); err != nil {
+		return
+	}
+	req, err = http.NewRequest(method, u.String(), &buf)
+	if err != nil {
+		return
+	}
+	content_type = mw.FormDataContentType()
+	return
+}
+
 func (c *Client) doAPI(ctx context.Context, method string, uri string, params interface{}, res interface{}, pg *Pagination) error {
 	u, err := url.Parse(c.Config.Server)
 	if err != nil {
@@ -104,6 +150,8 @@ func (c *Client) doAPI(ctx context.Context, method string, uri string, params in
 			return err
 		}
 		ct = mw.FormDataContentType()
+	} else if multipartmap, ok := params.(map[string]interface{}); ok {
+		req, ct, err = doAPIMultiPartPost(u, multipartmap)
 	} else {
 		if method == http.MethodGet && pg != nil {
 			u.RawQuery = pg.toValues().Encode()

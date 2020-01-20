@@ -277,9 +277,13 @@ func (c *Client) Search(ctx context.Context, q string, resolve bool) (*Results, 
 }
 
 // UploadMedia upload a media attachment from a file.
-func (c *Client) UploadMedia(ctx context.Context, file string) (*Attachment, error) {
+func (c *Client) UploadMedia(ctx context.Context, file string, description string) (*Attachment, error) {
 	var attachment Attachment
-	err := c.doAPI(ctx, http.MethodPost, "/api/v1/media", file, &attachment, nil)
+	params := map[string]interface{}{"file": file}
+	if len(description) > 0 {
+		params["description"] = description
+	}
+	err := c.doAPI(ctx, http.MethodPost, "/api/v1/media", params, &attachment, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -287,9 +291,13 @@ func (c *Client) UploadMedia(ctx context.Context, file string) (*Attachment, err
 }
 
 // UploadMediaFromReader uploads a media attachment from a io.Reader.
-func (c *Client) UploadMediaFromReader(ctx context.Context, reader io.Reader) (*Attachment, error) {
+func (c *Client) UploadMediaFromReader(ctx context.Context, reader io.Reader, description string) (*Attachment, error) {
 	var attachment Attachment
-	err := c.doAPI(ctx, http.MethodPost, "/api/v1/media", reader, &attachment, nil)
+	params := map[string]interface{}{"file": reader}
+	if len(description) > 0 {
+		params["description"] = description
+	}
+	err := c.doAPI(ctx, http.MethodPost, "/api/v1/media", params, &attachment, nil)
 	if err != nil {
 		return nil, err
 	}
