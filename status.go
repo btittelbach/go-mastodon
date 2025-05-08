@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/textproto"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
 )
 
 // Status is struct to hold status.
@@ -117,6 +119,8 @@ type Media struct {
 	Focus       string
 }
 
+// TODO fix error:
+// bad request: 422 Unprocessable Entity: Validation failed: File content type is invalid, File is invalid
 func (m *Media) bodyAndContentType() (io.Reader, string, error) {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
@@ -125,7 +129,14 @@ func (m *Media) bodyAndContentType() (io.Reader, string, error) {
 	if f, ok := m.File.(*os.File); ok {
 		fileName = f.Name()
 	}
-	file, err := mw.CreateFormFile("file", fileName)
+	// file, err := mw.CreateFormFile("file", fileName)
+	fieldname := "file"
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
+			mimeEscapeQuotes(fieldname), mimeEscapeQuotes(fileName)))
+	h.Set("Content-Type", "image/jpeg")
+	file, err := mw.CreatePart(h)
 	if err != nil {
 		return nil, "", err
 	}

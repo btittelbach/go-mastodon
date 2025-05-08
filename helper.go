@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type APIError struct {
@@ -69,4 +70,10 @@ func parseAPIError(prefix string, resp *http.Response) error {
 	}
 
 	return &res
+}
+
+var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func mimeEscapeQuotes(s string) string {
+	return quoteEscaper.Replace(s)
 }
