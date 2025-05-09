@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/textproto"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
-
+	"log"
+	"errors"
 )
 
 // Status is struct to hold status.
@@ -119,22 +121,33 @@ type Media struct {
 	Focus       string
 }
 
-// TODO fix error:
-// bad request: 422 Unprocessable Entity: Validation failed: File content type is invalid, File is invalid
 func (m *Media) bodyAndContentType() (io.Reader, string, error) {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 
-	fileName := "upload"
+	fileName := "upload.jpg"
 	if f, ok := m.File.(*os.File); ok {
-		fileName = f.Name()
+		fileName = filepath.Base(f.Name())
+		if "" == filepath.Ext(fileName) {
+			fileName += ".jpg"
+		}
+
+		// check file exists
+		if _, err := os.Stat(f.Name()); err == nil {
+			log.Printf("image file exists")
+		} else if errors.Is(err, os.ErrNotExist) {
+			log.Printf("image file DOES NOT exist")
+		}
+
 	}
+
 	// file, err := mw.CreateFormFile("file", fileName)
 	fieldname := "file"
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
 			mimeEscapeQuotes(fieldname), mimeEscapeQuotes(fileName)))
+	// h.Set("Content-Type", "application/octet-stream")
 	h.Set("Content-Type", "image/jpeg")
 	file, err := mw.CreatePart(h)
 	if err != nil {
@@ -145,7 +158,7 @@ func (m *Media) bodyAndContentType() (io.Reader, string, error) {
 	}
 
 	if m.Thumbnail != nil {
-		thumbName := "upload"
+		thumbName := "thumbnail.jpg"
 		if f, ok := m.Thumbnail.(*os.File); ok {
 			thumbName = f.Name()
 		}
